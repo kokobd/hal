@@ -31,6 +31,7 @@ import           Data.Aeson.Types                  (ToJSON)
 import           Data.Bifunctor                    (first)
 import qualified Data.ByteString                   as BS
 import qualified Data.ByteString.Lazy              as BSW
+import           Conduit                           (iterMC)
 import           Data.Conduit                      (ConduitM, runConduit, yield,
                                                     (.|))
 import           Data.Conduit.Attoparsec           (sinkParser)
@@ -62,6 +63,7 @@ import           Network.HTTP.Types.Status         (Status, status403,
                                                     statusIsSuccessful)
 import           System.Environment                (getEnv)
 import           System.IO                         (hPutStrLn, stderr)
+import qualified Data.ByteString.Char8             as BSC
 
 -- | Lambda runtime error that we pass back to AWS
 data LambdaError = LambdaError
@@ -171,7 +173,7 @@ sendInitError baseRuntimeRequest manager e =
 httpValue :: Request -> Manager -> IO (Response Value)
 httpValue request manager =
   withResponse request manager (\bodyReaderRes -> do
-    value <- runConduit $ bodyReaderSource (responseBody bodyReaderRes) .| sinkParser value'
+    value <- runConduit $ bodyReaderSource (responseBody bodyReaderRes) .| debugRawBytes .| sinkParser value'
     return $ fmap (const value) bodyReaderRes
   )
 
@@ -186,6 +188,11 @@ bodyReaderSource br =
         unless (BS.null bs) $ do
             yield bs
             loop
+
+-- Debug conduit that logs raw ByteString before passing it through
+debugRawBytes :: MonadIO m => ConduitM BS.ByteString BS.ByteString m ()
+debugRawBytes = iterMC $ \bs ->
+  liftIO $ hPutStrLn stderr $ "DEBUG: Raw event ByteString: " ++ BSC.unpack bs
 
 -- Retry Helpers
 
