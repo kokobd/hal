@@ -65,6 +65,7 @@ import           Network.HTTP.Types.Status         (Status, status403,
 import           System.Environment                (getEnv)
 import           System.IO                         (hPutStrLn, stderr)
 import qualified Data.ByteString.Char8             as BSC
+import qualified Data.ByteString.Base16            as B16
 
 -- | Lambda runtime error that we pass back to AWS
 data LambdaError = LambdaError
@@ -197,6 +198,7 @@ debugRawBytes = iterMC $ \bs -> do
         Left _  -> "no"
         Right _ -> "yes"
   liftIO $ hPutStrLn stderr $ "DEBUG: Raw event ByteString (valid UTF-8: " ++ isValidUtf8 ++ "): " ++ BSC.unpack bs
+  liftIO $ hPutStrLn stderr $ "DEBUG: Raw event ByteString (hex): " ++ BSC.unpack (B16.encode bs)
 
 -- Retry Helpers
 
