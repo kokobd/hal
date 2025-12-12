@@ -31,6 +31,7 @@ import           Data.Aeson.Types                  (ToJSON)
 import           Data.Bifunctor                    (first)
 import qualified Data.ByteString                   as BS
 import qualified Data.ByteString.Lazy              as BSW
+import qualified Data.Text.Encoding                as TE
 import           Conduit                           (iterMC)
 import           Data.Conduit                      (ConduitM, runConduit, yield,
                                                     (.|))
@@ -191,8 +192,11 @@ bodyReaderSource br =
 
 -- Debug conduit that logs raw ByteString before passing it through
 debugRawBytes :: MonadIO m => ConduitM BS.ByteString BS.ByteString m ()
-debugRawBytes = iterMC $ \bs ->
-  liftIO $ hPutStrLn stderr $ "DEBUG: Raw event ByteString: " ++ BSC.unpack bs
+debugRawBytes = iterMC $ \bs -> do
+  let isValidUtf8 = case TE.decodeUtf8' bs of
+        Left _  -> "no"
+        Right _ -> "yes"
+  liftIO $ hPutStrLn stderr $ "DEBUG: Raw event ByteString (valid UTF-8: " ++ isValidUtf8 ++ "): " ++ BSC.unpack bs
 
 -- Retry Helpers
 
